@@ -37,7 +37,9 @@ class vocabulary:
             self.pool.pop(0)
         else:
             messagebox.showinfo('Message', f"試題結束!!重整題庫")
-            self.update()
+            self.pool = self.update()
+            ques_num = self.pool[0]
+            self.pool.pop(0)
 
         # Choose answer option
         items = random.sample(self.words_index, 4)
