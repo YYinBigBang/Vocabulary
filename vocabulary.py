@@ -1,20 +1,22 @@
-"""version 2.0"""
+"""version 2.1"""
 import tkinter as tk
-from tkinter import messagebox, Radiobutton
+from tkinter import messagebox, Radiobutton, filedialog
 import csv
 import random
 
 
 class vocabulary:
     def __init__(self):
-        self.words = self.csv_load()
+        self.filename = 'word_db.csv'
+        self.words = self.csv_load(self.filename)
         self.words_index = [index for index in range(0, len(self.words))]
         self.pool = self.update()
 
-    def csv_load(self):
+    def csv_load(self, csvFile):
         """Load vocavulary from csv file"""
         self.words = {}
-        with open('word_db.csv', newline='', encoding="utf-8") as csvfile:
+        self.filename = csvFile
+        with open(self.filename, newline='', encoding="utf-8") as csvfile:
             rows = csv.DictReader(csvfile)
             index = 0
             for row in rows:
@@ -23,8 +25,13 @@ class vocabulary:
             print(f"{index} words have been loaded!")
         return self.words
 
+    def csv_reload(self, csvFile):
+        self.csv_load(csvFile)
+        self.load_pool()
+
     def update(self):
         """Update words pool"""
+        self.words_index = [index for index in range(0, len(self.words))]
         return random.sample(self.words_index, len(self.words))
 
     def load_pool(self):
@@ -67,17 +74,21 @@ class vocabulary:
 class main_window(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.iconbitmap('alphabet.ico')
+        try:
+            self.iconbitmap('alphabet.ico')
+        except :
+            pass
         self.title('Vocabulary')
         self.font_type = ("Helvetica", 15)
 
         menubar = tk.Menu(self)
+        menubar.add_command(label="題庫切換", command=self.pick_csv)
         option1 = tk.Menu(menubar, tearoff=0)
         option1.add_command(label="單字卡", command=self.show_frame1)
         option1.add_command(label="單字測驗", command=self.show_frame2)
         option1.add_separator()
         option1.add_command(label="回選單", command=self.show_menuFrame)
-        menubar.add_cascade(label="模式", menu=option1)
+        menubar.add_cascade(label="模式選擇", menu=option1)
         self.config(menu=menubar)
 
         # Create the frames
@@ -94,6 +105,16 @@ class main_window(tk.Tk):
         self.show_menuFrame()
 
 
+    def pick_csv(self):
+        while csvfile := filedialog.askopenfilename():
+            if '.csv' in csvfile:
+                voc_show.csv_reload(csvfile)
+                voc_exam.csv_reload(csvfile)
+                break
+            else:
+                messagebox.showinfo('提醒', "請選擇csv檔案")
+
+
     def menuFrame_element(self):
         pick = tk.Label(self.menuFrame, height=2, width=20, text="選擇模式", font=self.font_type)
         mode1_btn = tk.Button(self.menuFrame, text='單字卡', height=2, width=15, command=self.show_frame1, font=self.font_type)
@@ -104,9 +125,10 @@ class main_window(tk.Tk):
 
 
     def frame1_element(self):
-        voc = vocabulary()
+        global voc_show
+        voc_show = vocabulary()
         def show_word():
-            words = voc.take_word()
+            words = voc_show.take_word()
             en_word.set(words['ENG'])
             ch_word.set(words['CHI'])
 
@@ -124,7 +146,8 @@ class main_window(tk.Tk):
 
 
     def frame2_element(self):
-        voc = vocabulary()
+        global voc_exam
+        voc_exam = vocabulary()
         def words_set(ques_num, items):
             global radio_item
             # print("______出題______")
@@ -134,11 +157,11 @@ class main_window(tk.Tk):
             radio_item = []
             for item in items:
                 radio_item.append(item)
-            en_word.set(voc.words[ques_num]['ENG'])
-            ch_word1.set(voc.words[radio_item[0]]['CHI'])
-            ch_word2.set(voc.words[radio_item[1]]['CHI'])
-            ch_word3.set(voc.words[radio_item[2]]['CHI'])
-            ch_word4.set(voc.words[radio_item[3]]['CHI'])
+            en_word.set(voc_exam.words[ques_num]['ENG'])
+            ch_word1.set(voc_exam.words[radio_item[0]]['CHI'])
+            ch_word2.set(voc_exam.words[radio_item[1]]['CHI'])
+            ch_word3.set(voc_exam.words[radio_item[2]]['CHI'])
+            ch_word4.set(voc_exam.words[radio_item[3]]['CHI'])
 
         def submit(ques_num, ans):
             # print("===送出答案===")
@@ -148,11 +171,11 @@ class main_window(tk.Tk):
             if radio_item[ans] == ques_num:
                 messagebox.showinfo('The result is ~', f"恭喜答對")
             else:
-                messagebox.showinfo('The result is ~', f"答錯囉~答案為:{voc.words[ques_num]['CHI']}")
-            ques_num, items = voc.take_ques()
+                messagebox.showinfo('The result is ~', f"答錯囉~答案為:{voc_exam.words[ques_num]['CHI']}")
+            ques_num, items = voc_exam.take_ques()
             words_set(ques_num, items)
 
-        ques_num, items = voc.take_ques()
+        ques_num, items = voc_exam.take_ques()
 
         en_word = tk.StringVar()
         ch_word1 = tk.StringVar()
